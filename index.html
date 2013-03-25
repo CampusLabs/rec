@@ -91,7 +91,7 @@
               return '<a href="' + result.imdb_url + '">' +
                 result.title + '</a>';
             },
-            url: 'http://imdbapi.org/?callback',
+            url: 'http://imdbapi.org',
             data: {limit: 10},
             groupBy: function (result) {
               return (result.rated || 'UNRATED').replace(/_/g, ' ');
