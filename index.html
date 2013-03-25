@@ -34,42 +34,35 @@
         width: 100%;
       }
 
+      .js-rec-loading input {
+        background: url('http://brianmccutcheon.com/img/loading_spinners/loading_spinner.gif') right center no-repeat;
+        background-size: contain;
+      }
+
       .results {
         background: #eee;
         box-shadow: 0 1px 3px rgba(0, 0, 0, .5);
       }
 
-      .loading,
       .no-results,
       .js-rec-result {
         display: block;
-        padding-right: 5px;
+        padding: 5px;
         text-align: left;
         color: #333;
         border-top: 1px solid #fff;
         border-bottom: 1px solid #ccc;
         font-weight: bold;
-        vertical-align: middle;
         text-decoration: none;
       }
-
-      .js-rec-result img {
-        margin-right: 5px;
-        width: 25px;
-        vertical-align: middle;
-      }
-
       .js-rec-selected {
         background: #ccc;
       }
 
-      .loading,
       .no-results {
-        padding: 5px;
         display: none;
       }
 
-      .js-rec-loading .loading,
       .js-rec-no-results .no-results {
         display: block;
       }
@@ -95,10 +88,8 @@
           window.rec = new Rec('.js-rec', {
             delay: 250,
             template: function (result) {
-              var url = result.poster || 'http://www.harvardpsc.com/wordpress' +
-                '/wp-content/themes/lightword/images/no_image.gif';
               return '<a href="' + result.imdb_url + '">' +
-                '<img src="' + url + '">' + result.title + '</a>';
+                result.title + '</a>';
             },
             url: 'http://imdbapi.org/?callback',
             data: {limit: 10},
@@ -125,7 +116,6 @@
         <input class='js-rec-input' placeholder='Search for movies...' name='q'>
       </form>
       <div class='js-rec-results results'>
-        <div class='loading'>Loading...</div>
         <div class='no-results'>No results found.</div>
       </div>
     </div>
