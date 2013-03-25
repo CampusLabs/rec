@@ -1,7 +1,7 @@
 {
-  "name": "olay",
-  "version": "0.1.9",
-  "main": ["./olay.js", "./olay.css"],
+  "name": "rec",
+  "version": "0.0.1",
+  "main": ["./rec.js"],
   "dependencies": {
     "jquery": "x",
     "underscore": "x"
