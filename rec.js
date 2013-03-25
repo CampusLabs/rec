@@ -232,13 +232,13 @@
     },
 
     show: function () {
-      this.$el.find('.js-rec-results').removeClass('js-rec-none');
+      this.$el.find('.js-rec-results');
       this.select();
       return this;
     },
 
     hide: function () {
-      this.$el.find('.js-rec-results').addClass('js-rec-none');
+      this.$el.find('.js-rec-results');
       return this;
     },
 
