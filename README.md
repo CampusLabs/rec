@@ -9,18 +9,16 @@
 Rec's two dependencies are jQuery and Underscore, so include them before Rec.
 
 ```html
-<link rel='stylesheet' href='https://raw.github.com/orgsync/olay/master/rec.css'>
 <script src='https://raw.github.com/orgsync/olay/master/rec.js'></script>
 ```
 
 ...or use [bower](https://github.com/twitter/bower)...
 
 ```
-bower install red
+bower install rec
 ```
 
-...and get the JavaScript and CSS files from `components/rec/rec.js` and
-`components/rec/rec.css` respectively.
+...and get the JavaScript file from `components/rec/rec.js`.
 
 ## API
 

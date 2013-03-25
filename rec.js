@@ -24,11 +24,18 @@
 
   // Delegated event bindings to children of `$el`.
   var delegatedEvents = {
+
+    // Delegated events for the input area.
     '.js-rec-input': {
+
+      // Update the `_focus` flag and show the latest query results.
       focus: function (ev) {
         this._focus = true;
         this.query($(ev.currentTarget).val()).show();
       },
+
+      // Check for the up/down keys and enter key, and finally submit a new
+      // query.
       keydown: function (ev) {
         var key = ev.which;
         var dir = keyDirMap[key] || (ev.ctrlKey && ctrlKeyDirMap[key]);
@@ -39,7 +46,6 @@
         if (key === 13) {
           var $selected = this.$el.find('.js-rec-selected');
           if ($selected.length) {
-            $selected.click();
             $selected[0].click();
             return ev.preventDefault();
           }
@@ -47,16 +53,28 @@
         var $input = $(ev.currentTarget);
         _.defer(_.bind(function () { this.query($input.val()); }, this));
       },
+
+      // Hide the results when focus is lost.
       blur: function () {
         this._focus = false;
         if (!this._hover) this.hide();
       }
     },
+
+    // Delegated events for invidiual results.
     '.js-rec-result': {
+
+      // Select the result that is being hovered over.
       mouseover: function (ev) { this.select($(ev.currentTarget)); },
+
+      // Optionally clear and hide the input and results on result click.
       click: function () {
-        this.$el.find('.js-rec-input').blur();
-        this.hide();
+        var $input = this.$el.find('.js-rec-input');
+        if (this.clearOnClick) $input.val('').focus();
+        if (this.hideOnClick) {
+          $input.blur();
+          this.hide();
+        }
       }
     }
   };
@@ -72,7 +90,9 @@
   // ```
   var Rec = window.Rec = function (el, options) {
 
-    // Define a direct and delegated event hash unique to this instance.
+    // Define direct and delegated event hashes unique to this instance. This
+    // will allow a clean unbinding of these events without worry about any
+    // event collisions.
     this._directEvents = {};
     _.each(directEvents, function (cb, key) {
       this._directEvents[key] = _.bind(cb, this);
@@ -104,21 +124,61 @@
     // How long since the last keystroke should rec wait to call `fetch`?
     delay: 250,
 
-    // Should results be cached? Any cross-session caching will need to be
-    // handled by your `fetch` method.
-    cache: true,
+    // How many results should be displayed? `0` means as many as are returned
+    // by `fetch`.
+    limit: 0,
 
-    // The key to use for the query in the query string.
-    queryKey: 'q',
+    // Should results be cached? Any cross-session caching will need to be
+    // handled by your `fetch` method, but in-memory caching is free with rec.
+    cache: true,
 
     // Should the first result automatically be selected? In other words, will
     // hitting return fire the first recommended result or the broad result?
     selectFirst: true,
 
+    // Should the results be hidden and focus blurred when a result is clicked?
+    hideOnClick: false,
+
+    // Should the input be cleared when a result is clicked?
+    clearOnClick: true,
+
+    // The query string key that will be used with the default `fetch` method.
+    queryKey: 'q',
+
+    // Override this template functions to return your labels and results the
+    // way you want them. If you are not using the `groupBy` option,
+    // `labelTemplate` will be ignored.
+    labelTemplate: function (label) { return '<div>' + label + '</div>'; },
+    resultTemplate: function (result) { return '<div>' + result + '</div>'; },
+
     // Parse the query before sending it to `fetch`. This allows you to clean up
     // bad characters, extra spaces, etc...
     parse: function (q) {
       return q.replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '').toLowerCase();
+    },
+
+    // `filter` works alongside `cache` to intelligently predict possible
+    // results while waiting for a server request to come back. Override this
+    // function with logic that best matches your server's filter logic.
+    filter: function (q, result) {
+      var str = (result.title || '').toLowerCase();
+      return _.every(q.split(' '), function (word) {
+        return ~str.indexOf(word);
+      });
+    },
+
+    // The default `fetch` is designed for simple, JSON AJAX requests. Override
+    // thid function to suite your application's needs.
+    fetch: function (q, cb) {
+      var options = this.fetchOptions || {};
+      (options.data || (options.data = {}))[this.queryKey] = q;
+      $.ajax(_.extend({
+        type: 'get',
+        dataType: 'json',
+        success: function (results) { cb(null, results); },
+        error: function (xhr) { cb(xhr.responseText); }
+      }, options));
+      return this;
     },
 
     query: function (q) {
@@ -138,7 +198,7 @@
       }
 
       // Looked for a cache result before trying to load.
-      if (!this.getCached(q)) {
+      if (!this._getCached(q)) {
 
         // Add the loading class.
         ++this._fetchQueue;
@@ -150,7 +210,7 @@
           self._timeout = null;
           self.fetch(q, function (er, results) {
             if (!--self._fetchQueue) self.$el.removeClass('js-rec-loading');
-            if (!er) self.setCached(q, results);
+            if (!er) self._setCached(q, results);
             self._render();
           });
         }, this.delay);
@@ -158,87 +218,21 @@
       return this._render();
     },
 
-    // The default `fetch` sends `rec.url` a GET request with the URL parameter
-    // `q` set to the value passed. You can override this method to use your own
-    // retrieval method.
-    fetch: function (q, cb) {
-      var data = this.data || {};
-      data[this.queryKey] = q;
-      $.ajax({
-        type: 'get',
-        url: this.url,
-        data: data,
-        dataType: 'json',
-        success: function (results) { cb(null, results); },
-        error: function (xhr) { cb(xhr.responseText); }
-      });
-      return this;
-    },
-
     // Set the input element the rec will watch.
     setElement: function (el) {
-      if (this.$el) {
-        this.$el.off(this._directEvents);
-        this._unbind();
-      }
-      this.$el = (el instanceof $ ? el : $(el)).on(this._directEvents);
-      this._bind();
-      return this;
-    },
-
-    // Bind (or unbind) delegated events from a multi-level object.
-    _bind: function (unbind) {
-      var $el = this.$el;
-      var method = unbind ? 'off': 'on';
-      _.each(this._delegatedEvents, function (evs, selector) {
-        _.each(evs, function (cb, name) { $el[method](name, selector, cb); });
-      });
-    },
-
-    // Inverse `_bind`.
-    _unbind: function () { this._bind('off'); },
-
-    // Build the elements for the given query, only if they haven't been built
-    // yet.
-    _render: function () {
-      var q = this._lastQ;
-      var results = this.getCached(q) || this.getFiltered(q);
-      this.$el.removeClass('js-rec-no-results');
-      this.$el.find('.js-rec-result, .js-rec-label').remove();
-      var $results = this.$el.find('.js-rec-results');
-      if (!results) return this;
-      if (_.size(results)) {
-        _.each(results, function (results, label) {
-          if (label !== 'undefined') $results.append(this._renderLabel(label));
-          _.each(results, function (result) {
-            $results.append(this._renderResult(result));
-          }, this);
-        }, this);
-        this.select();
-      } else {
-        this.$el.addClass('js-rec-no-results');
-      }
-      return this;
-    },
-
-    _renderLabel: function (label) {
-      return $('<div>').addClass('js-rec-label').text(label);
-    },
-
-    _renderResult: function (result) {
-      return $(this.template(result))
-        .addClass('js-rec-result')
-        .data('recResult', result);
+      if (this.$el) this._unbind();
+      this.$el = el instanceof $ ? el : $(el);
+      return this._bind();
     },
 
     show: function () {
-      this.$el.find('.js-rec-results');
+      this.$el.find('.js-rec-results').removeAttr('style');
       this.select();
       return this;
     },
 
     hide: function () {
-      this.$el.find('.js-rec-results');
+      this.$el.find('.js-rec-results').css('display', 'none');
       return this;
     },
 
@@ -268,21 +262,21 @@
       return this.select($next);
     },
 
-    getCached: function (q) {
+    _getCached: function (q) {
       return this.cache && this._cached[q];
     },
 
-    setCached: function (q, results) {
+    _setCached: function (q, results) {
       results = results instanceof Array ? results : [];
-      this._cached[q] = _.groupBy(results, this.groupBy);
+      this._cached[q] = _.groupBy(results, this.groupBy || 'undefined');
       return this;
     },
 
-    getFiltered: function (q) {
+    _getFiltered: function (q) {
       if (!this.filter) return null;
       var cached;
       for (var i = q.length - 1; i > 0; --i) {
-        if (cached = this.getCached(q.slice(0, i))) break;
+        if (cached = this._getCached(q.slice(0, i))) break;
       }
       if (!cached) return null;
       var filter = _.bind(this.filter, this, q);
@@ -292,6 +286,58 @@
         return matches;
       }, {});
       return _.size(matches) ? matches : null;
+    },
+
+
+    // Bind (or unbind) delegated events from a multi-level object.
+    _bind: function (unbind) {
+      var $el = this.$el;
+      var method = unbind ? 'off': 'on';
+      $el[method](this._directEvents);
+      _.each(this._delegatedEvents, function (evs, selector) {
+        _.each(evs, function (cb, name) { $el[method](name, selector, cb); });
+      });
+      return this;
+    },
+
+    // Inverse `_bind`.
+    _unbind: function () { return this._bind('off'); },
+
+    // Build the elements for the most recent query.
+    _render: function () {
+      var q = this._lastQ;
+      var results = this._getCached(q) || this._getFiltered(q);
+      this.$el.removeClass('js-rec-no-results');
+      this.$el.find('.js-rec-result, .js-rec-label').remove();
+      var $results = this.$el.find('.js-rec-results');
+      if (!results) return this;
+      if (_.size(results)) {
+        var limit = this.limit;
+        var count = 0;
+        _.each(results, function (results, label) {
+          if (limit && count === limit) return;
+          if (label !== 'undefined') $results.append(this._renderLabel(label));
+          _.each(results, function (result) {
+            if (limit && count === limit) return;
+            $results.append(this._renderResult(result));
+            ++count;
+          }, this);
+        }, this);
+        this.select();
+      } else {
+        this.$el.addClass('js-rec-no-results');
+      }
+      return this;
+    },
+
+    _renderLabel: function (label) {
+      var el = this.labelTemplate(label);
+      return (el instanceof $ ? el : $(el)).addClass('js-rec-label');
+    },
+
+    _renderResult: function (result) {
+      var el = this.resultTemplate(result);
+      return (el instanceof $ ? el : $(el)).addClass('js-rec-result');
     }
   };
 
