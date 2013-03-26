@@ -40,8 +40,8 @@
         var key = ev.which;
         var dir = keyDirMap[key] || (ev.ctrlKey && ctrlKeyDirMap[key]);
         if (dir) {
-          ev.preventDefault();
-          return this[dir]();
+          this[dir]();
+          return ev.preventDefault();
         }
         if (key === 13) {
           var $selected = this.$el.find('.js-rec-selected');
@@ -51,6 +51,11 @@
           }
         }
         var $input = $(ev.currentTarget);
+        if (key === 27) {
+          $input.blur();
+          this.hide();
+          return ev.preventDefault();
+        }
         _.defer(_.bind(function () { this.query($input.val()); }, this));
       },
 
