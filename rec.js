@@ -150,6 +150,9 @@
     // The query string key that will be used with the default `fetch` method.
     queryKey: 'q',
 
+    // Should rec attempt to fetch query results for an empty string?
+    fetchEmptyQuery: false,
+
     // Override this template functions to return your labels and results the
     // way you want them. If you are not using the `groupBy` option,
     // `labelTemplate` will be ignored.
@@ -166,7 +169,7 @@
     // results while waiting for a server request to come back. Override this
     // function with logic that best matches your server's filter logic.
     filter: function (q, result) {
-      var str = (result.title || '').toLowerCase();
+      var str = JSON.stringify(result).toLowerCase();
       return _.every(q.split(' '), function (word) {
         return ~str.indexOf(word);
       });
@@ -203,7 +206,7 @@
       }
 
       // Looked for a cache result before trying to load.
-      if (!this._getCached(q)) {
+      if (!this._getCached(q) && (q || this.fetchEmptyQuery)) {
 
         // Add the loading class.
         ++this._fetchQueue;
@@ -272,8 +275,7 @@
     },
 
     _setCached: function (q, results) {
-      results = results instanceof Array ? results : [];
-      this._cached[q] = _.groupBy(results, this.groupBy || 'undefined');
+      this._cached[q] = results instanceof Array ? results : [];
       return this;
     },
 
@@ -316,14 +318,16 @@
       this.$el.find('.js-rec-result, .js-rec-label').remove();
       var $results = this.$el.find('.js-rec-results');
       if (!results) return this;
-      if (_.size(results)) {
-        var limit = this.limit;
+      if (results.length) {
+        results = this.limit ? _.first(results, this.limit) : results;
+        var limit = results.length;
         var count = 0;
+        results = _.groupBy(results, this.groupBy || 'undefined');
         _.each(results, function (results, label) {
-          if (limit && count === limit) return;
+          if (count === limit) return;
           if (label !== 'undefined') $results.append(this._renderLabel(label));
           _.each(results, function (result) {
-            if (limit && count === limit) return;
+            if (count === limit) return;
             $results.append(this._renderResult(result));
             ++count;
           }, this);
