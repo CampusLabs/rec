@@ -240,7 +240,7 @@
     },
 
     hide: function () {
-      this.$el.addClass('js-rec-active');
+      this.$el.removeClass('js-rec-active');
       return this;
     },
 
