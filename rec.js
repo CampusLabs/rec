@@ -234,20 +234,20 @@
     },
 
     show: function () {
-      this.$el.find('.js-rec-results').removeAttr('style');
+      this.$el.addClass('js-rec-active');
       this.select();
       return this;
     },
 
     hide: function () {
-      this.$el.find('.js-rec-results').css('display', 'none');
+      this.$el.addClass('js-rec-active');
       return this;
     },
 
     select: function ($el) {
       this.$el.find('.js-rec-selected').removeClass('js-rec-selected');
       if (!$el && this.selectFirst) {
-        $el = this.$el.find('.js-rec-result').first();
+        $el = this.$el.find('.js-rec-selectable').first();
       }
       if ($el) $el.addClass('js-rec-selected');
       return this;
@@ -255,15 +255,15 @@
 
     prev: function () {
       return this.select(
-        this.$el.find('.js-rec-selected').prevAll('.js-rec-result').first()
+        this.$el.find('.js-rec-selected').prevAll('.js-rec-selectable').first()
       );
     },
 
     next: function () {
       var $selected = this.$el.find('.js-rec-selected');
-      var $next = $selected.nextAll('.js-rec-result').first();
+      var $next = $selected.nextAll('.js-rec-selectable').first();
       if (!$selected.length) {
-        $next = this.$el.find('.js-rec-result').first();
+        $next = this.$el.find('.js-rec-selectable').first();
       } else if (!$next.length) {
         return this;
       }
@@ -287,11 +287,7 @@
       }
       if (!cached) return null;
       var filter = _.bind(this.filter, this, q);
-      var matches = _.reduce(cached, function (matches, results, label) {
-        var filtered = _.filter(results, filter);
-        if (filtered.length) matches[label] = filtered;
-        return matches;
-      }, {});
+      var matches = _.filter(cached, filter);
       return _.size(matches) ? matches : null;
     },
 
@@ -308,7 +304,7 @@
     },
 
     // Inverse `_bind`.
-    _unbind: function () { return this._bind('off'); },
+    _unbind: function () { return this._bind(true); },
 
     // Build the elements for the most recent query.
     _render: function () {
@@ -316,8 +312,8 @@
       var results = this._getCached(q) || this._getFiltered(q);
       this.$el.removeClass('js-rec-no-results');
       this.$el.find('.js-rec-result, .js-rec-label').remove();
-      var $results = this.$el.find('.js-rec-results');
       if (!results) return this;
+      var $results = this.$el.find('.js-rec-results');
       if (results.length) {
         results = this.limit ? _.first(results, this.limit) : results;
         var limit = results.length;
@@ -346,7 +342,8 @@
 
     _renderResult: function (result) {
       var el = this.resultTemplate(result);
-      return (el instanceof $ ? el : $(el)).addClass('js-rec-result');
+      return (el instanceof $ ? el : $(el))
+        .addClass('js-rec-result js-rec-selectable');
     }
   };
 
