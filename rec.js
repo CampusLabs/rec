@@ -51,7 +51,7 @@
           }
         }
         var $input = $(ev.currentTarget);
-        if (key === 27) {
+        if (key === 27 && this !== $input[0]) {
           $input.blur();
           this.hide();
           return ev.preventDefault();
@@ -67,14 +67,15 @@
     },
 
     // Delegated events for invidiual results.
-    '.js-rec-result': {
+    '.js-rec-selectable': {
 
       // Select the result that is being hovered over.
       mouseover: function (ev) { this.select($(ev.currentTarget)); },
 
       // Optionally clear and hide the input and results on result click.
-      click: function () {
+      click: function (ev) {
         var $input = this.$el.find('.js-rec-input');
+        if (ev.currentTarget === $input[0]) return;
         if (this.clearOnClick) $input.val('').focus();
         if (this.hideOnClick) {
           $input.blur();
@@ -120,11 +121,11 @@
     this.setElement(el);
 
     // Extend the instance with its options.
-    for (var name in options) this[name] = options[name];
+    _.extend(this, options);
   };
 
-  // Define `prototype` properties and methods for `Olay`.
-  var proto = {
+  // Define `prototype` properties and methods for `Rec`.
+  _.extend(Rec.prototype, {
 
     // How long since the last keystroke should rec wait to call `fetch`?
     delay: 250,
@@ -137,9 +138,10 @@
     // handled by your `fetch` method, but in-memory caching is free with rec.
     cache: true,
 
-    // Should the first result automatically be selected? In other words, will
-    // hitting return fire the first recommended result or the broad result?
-    selectFirst: true,
+    // Should the second selectable item be automatically selected? In other
+    // words, will hitting return fire the first recommended result or the broad
+    // result?
+    selectSecond: false,
 
     // Should the results be hidden and focus blurred when a result is clicked?
     hideOnClick: false,
@@ -151,7 +153,7 @@
     queryKey: 'q',
 
     // Should rec attempt to fetch query results for an empty string?
-    fetchEmptyQuery: false,
+    fetchNothing: false,
 
     // Override this template functions to return your labels and results the
     // way you want them. If you are not using the `groupBy` option,
@@ -169,10 +171,8 @@
     // results while waiting for a server request to come back. Override this
     // function with logic that best matches your server's filter logic.
     filter: function (q, result) {
-      var str = JSON.stringify(result).toLowerCase();
-      return _.every(q.split(' '), function (word) {
-        return ~str.indexOf(word);
-      });
+      var str = _.values(result).join(' ').toLowerCase();
+      return _.every(q.split(' '), function (w) { return ~str.indexOf(w); });
     },
 
     // The default `fetch` is designed for simple, JSON AJAX requests. Override
@@ -180,13 +180,12 @@
     fetch: function (q, cb) {
       var options = this.fetchOptions || {};
       (options.data || (options.data = {}))[this.queryKey] = q;
-      $.ajax(_.extend({
+      return $.ajax(_.extend({
         type: 'get',
         dataType: 'json',
         success: function (results) { cb(null, results); },
         error: function (xhr) { cb(xhr.responseText); }
       }, options));
-      return this;
     },
 
     query: function (q) {
@@ -216,9 +215,11 @@
         var self = this;
         this._timeout = delay(function () {
           self._timeout = null;
-          self.fetch(q, function (er, results) {
-            if (!--self._fetchQueue) self.$el.removeClass('js-rec-loading');
-            if (!er) self._setCached(q, results);
+          self.fetch(q, function (er, results, temp) {
+            if (!temp && !--self._fetchQueue) {
+              self.$el.removeClass('js-rec-loading');
+            }
+            self._setCached(q, results);
             self._render();
           });
         }, this.delay);
@@ -246,36 +247,35 @@
 
     select: function ($el) {
       this.$el.find('.js-rec-selected').removeClass('js-rec-selected');
-      if (!$el && this.selectFirst) {
-        $el = this.$el.find('.js-rec-selectable').first();
+      if (!$el) {
+        var $selectable = this.$el.find('.js-rec-selectable:visible');
+        var i = Math.min(this.selectSecond ? 1 : 0, $selectable.length - 1);
+        $el = $selectable.eq(i);
       }
-      if ($el) $el.addClass('js-rec-selected');
+      $el.addClass('js-rec-selected');
       return this;
     },
 
-    prev: function () {
-      return this.select(
-        this.$el.find('.js-rec-selected').prevAll('.js-rec-selectable').first()
-      );
+    _dir: function (step) {
+      var $selectable = this.$el.find('.js-rec-selectable:visible');
+      var $selected = $selectable.filter('.js-rec-selected');
+      var i = _.indexOf($selectable, $selected[0]);
+      if (i === -1) return this.select($selectable.first());
+      i += step;
+      if (i === -1 || i === $selectable.length) return this;
+      return this.select($selectable.eq(i));
     },
 
-    next: function () {
-      var $selected = this.$el.find('.js-rec-selected');
-      var $next = $selected.nextAll('.js-rec-selectable').first();
-      if (!$selected.length) {
-        $next = this.$el.find('.js-rec-selectable').first();
-      } else if (!$next.length) {
-        return this;
-      }
-      return this.select($next);
-    },
+    prev: function () { this._dir(-1); },
+
+    next: function () { this._dir(1); },
 
     _getCached: function (q) {
       return this.cache && this._cached[q];
     },
 
     _setCached: function (q, results) {
-      this._cached[q] = results instanceof Array ? results : [];
+      this._cached[q] = results;
       return this;
     },
 
@@ -310,29 +310,32 @@
     _render: function () {
       var q = this._lastQ;
       var results = this._getCached(q) || this._getFiltered(q);
-      this.$el.removeClass('js-rec-no-results');
-      this.$el.find('.js-rec-result, .js-rec-label').remove();
-      if (!results) return this;
-      var $results = this.$el.find('.js-rec-results');
-      if (results.length) {
-        results = this.limit ? _.first(results, this.limit) : results;
-        var limit = results.length;
-        var count = 0;
-        results = _.groupBy(results, this.groupBy || 'undefined');
-        _.each(results, function (results, label) {
-          if (count === limit) return;
-          if (label !== 'undefined') $results.append(this._renderLabel(label));
-          _.each(results, function (result) {
+      this.$el[(q === '' ? 'add' : 'remove') + 'Class']('js-rec-nothing')
+        .removeClass('js-rec-no-results')
+        .find('.js-rec-result, .js-rec-label').remove();
+      if (results) {
+        var $results = this.$el.find('.js-rec-results');
+        if (results.length) {
+          results = this.limit ? _.first(results, this.limit) : results;
+          var limit = results.length;
+          var count = 0;
+          results = _.groupBy(results, this.groupBy || 'undefined');
+          _.each(results, function (results, label) {
             if (count === limit) return;
-            $results.append(this._renderResult(result));
-            ++count;
+            if (label !== 'undefined') {
+              $results.append(this._renderLabel(label));
+            }
+            _.each(results, function (result) {
+              if (count === limit) return;
+              $results.append(this._renderResult(result));
+              ++count;
+            }, this);
           }, this);
-        }, this);
-        this.select();
-      } else {
-        this.$el.addClass('js-rec-no-results');
+        } else {
+          this.$el.addClass('js-rec-no-results');
+        }
       }
-      return this;
+      return this.select();
     },
 
     _renderLabel: function (label) {
@@ -345,8 +348,5 @@
       return (el instanceof $ ? el : $(el))
         .addClass('js-rec-result js-rec-selectable');
     }
-  };
-
-  // Extend `Rec.prototype`.
-  for (var name in proto) Rec.prototype[name] = proto[name];
+  });
 })();
