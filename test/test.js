@@ -115,8 +115,8 @@
       });
 
       it('merges fetchOptions into the jqXHR object', function () {
-        var options = {a: 1};
-        //Rec.prototype.fetch(options).a.should.equal(1);
+        rec.fetch().data.a.should.equal(1);
+        rec.fetch('query').data.obscure.should.equal('query');
       });
 
       after(function () {
