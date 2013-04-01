@@ -44,14 +44,14 @@
           return ev.preventDefault();
         }
         if (key === 13) {
-          var $selected = this.$el.find('.js-rec-selected');
-          if ($selected.length) {
-            $selected[0].click();
+          var selected = this.$el.find('.js-rec-selected')[0];
+          if (selected && selected !== ev.currentTarget) {
+            selected.click();
             return ev.preventDefault();
           }
         }
         var $input = $(ev.currentTarget);
-        if (key === 27 && this !== $input[0]) {
+        if (key === 27) {
           $input.blur();
           this.hide();
           return ev.preventDefault();
