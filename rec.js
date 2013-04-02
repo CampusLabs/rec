@@ -312,23 +312,18 @@
       var results = this._getCached(q) || this._getFiltered(q);
       this.$el[(q === '' ? 'add' : 'remove') + 'Class']('js-rec-nothing')
         .removeClass('js-rec-no-results')
-        .find('.js-rec-result, .js-rec-label').remove();
+        .remove('.js-rec-result, .js-rec-label');
       if (results) {
         var $results = this.$el.find('.js-rec-results');
         if (results.length) {
           results = this.limit ? _.first(results, this.limit) : results;
-          var limit = results.length;
-          var count = 0;
           results = _.groupBy(results, this.groupBy || 'undefined');
           _.each(results, function (results, label) {
-            if (count === limit) return;
             if (label !== 'undefined') {
               $results.append(this._renderLabel(label));
             }
             _.each(results, function (result) {
-              if (count === limit) return;
               $results.append(this._renderResult(result));
-              ++count;
             }, this);
           }, this);
         } else {

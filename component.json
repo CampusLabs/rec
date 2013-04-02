@@ -1,7 +1,8 @@
 {
   "name": "rec",
   "version": "0.0.1",
-  "main": ["./rec.js"],
+  "main": "rec.js",
+  "ignore": ["test", "index.html"],
   "dependencies": {
     "jquery": "x",
     "underscore": "x"
