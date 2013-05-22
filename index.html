@@ -69,7 +69,7 @@
         text-decoration: none;
         text-shadow: 0 1px 0 #fff;
       }
-      .js-rec-selected {
+      .js-rec-selected:not(.js-rec-input) {
         background: #ccc;
       }
 
@@ -126,7 +126,7 @@
     <div class='js-rec rec'>
       <form action='http://www.imdb.com/find'>
         <input
-          class='js-rec-input'
+          class='js-rec-input js-rec-selectable'
           placeholder='Search for movies...'
           name='q'
         >
