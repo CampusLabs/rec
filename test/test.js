@@ -5,6 +5,7 @@
   var _ = window._;
   var chai = window.chai;
   var mocha = window.mocha;
+  var Backbone = window.Backbone;
   var Rec = window.Rec;
 
   mocha.setup('bdd');
@@ -17,15 +18,15 @@
   var it = window.it;
 
   describe('Rec', function () {
-    describe('constructor(el, options)', function () {
+    describe('constructor(options)', function () {
       it('always sets an `$el` property', function () {
         (new Rec()).$el.should.be.an.instanceOf($);
-        (new Rec('body')).$el.should.be.an.instanceOf($);
-        (new Rec('<div>')).$el.should.be.an.instanceOf($);
+        (new Rec({el: 'body'})).$el.should.be.an.instanceOf($);
+        (new Rec({el: '<div>'})).$el.should.be.an.instanceOf($);
       });
 
       it('copies options onto the instance', function () {
-        var rec = new Rec(null, {delay: 1, limit: 2, cache: false});
+        var rec = new Rec({delay: 1, limit: 2, cache: false});
         rec.delay.should.equal(1);
         rec.limit.should.equal(2);
         rec.cache.should.equal(false);
@@ -35,7 +36,7 @@
     describe('setElement(el)', function () {
       var rec;
 
-      beforeEach(function () { rec = new Rec('<div>'); });
+      beforeEach(function () { rec = new Rec({el: '<div>'}); });
 
       it('returns `this`', function () {
         rec.setElement().should.equal(rec);
@@ -84,15 +85,15 @@
     describe('filter(q, result)', function () {
       it('matches with nGram-ish logic', function () {
         var filter = Rec.prototype.filter;
-        var alex = {name: 'Alex'};
+        var alex = new Backbone.Model({name: 'Alex'});
         filter('a', alex).should.be.ok;
         filter('b', alex).should.not.be.ok;
         filter('a b', alex).should.not.be.ok;
-        var bret = {name: 'Bret'};
+        var bret = new Backbone.Model({name: 'Bret'});
         filter('a', bret).should.not.be.ok;
         filter('b', bret).should.be.ok;
         filter('a b', bret).should.not.be.ok;
-        var albert = {name: 'Albert'};
+        var albert = new Backbone.Model({name: 'Albert'});
         filter('a', albert).should.be.ok;
         filter('b', albert).should.be.ok;
         filter('a b', albert).should.be.ok;
@@ -105,7 +106,7 @@
 
       before(function () {
         $.ajax = function (options) { return options; };
-        rec = new Rec(null, {
+        rec = new Rec({
           fetchOptions: {
             data: {a: 1},
             type: 'getitgirl'

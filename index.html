@@ -8,6 +8,7 @@
     <title>Rec Demo</title>
     <script src='components/jquery/jquery.js'></script>
     <script src='components/underscore/underscore.js'></script>
+    <script src='components/backbone/backbone.js'></script>
     <script src='rec.js'></script>
     <style>
       body {
@@ -98,13 +99,14 @@
         var Rec = window.Rec;
 
         $(function () {
-          window.rec = new Rec('.js-rec', {
+          window.rec = new Rec({
+            el: '.js-rec',
             limit: 5,
             delay: 250,
             selectSecond: true,
             resultTemplate: function (result) {
-              return '<a href="' + result.imdb_url + '">' +
-                result.title + '</a>';
+              return '<a href="' + result.get('imdb_url') + '">' +
+                result.get('title') + '</a>';
             },
             fetchOptions: {
               url: 'http://imdbapi.org',
@@ -124,7 +126,7 @@
     <div class='js-rec rec'>
       <form action='http://www.imdb.com/find'>
         <input
-          class='js-rec-input js-rec-selectable'
+          class='js-rec-input'
           placeholder='Search for movies...'
           name='q'
         >
