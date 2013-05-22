@@ -250,14 +250,15 @@
     },
 
     setCached: function (q, results) {
-      this.cached[q] = results && new this.Collection(results);
+      this.cached[q] = new this.Collection(results);
+      if (this.filter) this.cached[q] = this.getFiltered(q);
       return this;
     },
 
     getFiltered: function (q) {
       if (!this.filter) return null;
       var cached;
-      for (var i = q.length - 1; i > 0; --i) {
+      for (var i = q.length; i > 0; --i) {
         if (cached = this.getCached(q.slice(0, i))) break;
       }
       if (!cached) return null;
