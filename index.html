@@ -112,6 +112,12 @@
               url: 'http://imdbapi.org',
               data: {limit: 10}
             },
+            fetch: function (q, cb) {
+              this.fetchOptions.success = function (results) {
+                cb(null, results.error ? [] : results);
+              }
+              return Rec.prototype.fetch.apply(this, arguments);
+            },
             groupBy: function (result) {
               return (result.rated || 'UNRATED').replace(/_/g, ' ');
             }

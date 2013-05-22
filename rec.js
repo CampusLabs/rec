@@ -262,25 +262,24 @@
       }
       if (!cached) return null;
       var matches = cached.filter(_.bind(this.filter, this, q));
-      return _.size(matches) ? matches : null;
+      return matches.length ? new this.Collection(matches) : null;
     },
 
     // Build the elements for the most recent query.
     render: function () {
       var q = this.lastQ;
       var results = this.getCached(q) || this.getFiltered(q);
-      this.$el[(q === '' ? 'add' : 'remove') + 'Class']('js-rec-nothing')
+      this.$el
+        .toggleClass('js-rec-nothing', q === '')
         .removeClass('js-rec-no-results')
-        .remove('.js-rec-result, .js-rec-label');
+        .find('.js-rec-result, .js-rec-label').remove();
       if (results) {
         var $results = this.$el.find('.js-rec-results');
         if (results.length) {
           results = this.limit ? results.first(this.limit) : results.models;
           results = _.groupBy(results, this.groupBy || 'undefined');
           _.each(results, function (results, label) {
-            if (label !== 'undefined') {
-              $results.append(this.renderLabel(label));
-            }
+            if (label !== 'undefined') $results.append(this.renderLabel(label));
             _.each(results, function (result) {
               $results.append(this.renderResult(result));
             }, this);
@@ -303,5 +302,4 @@
         .addClass('js-rec-result js-rec-selectable');
     }
   });
-
 })();
