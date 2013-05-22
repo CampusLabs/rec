@@ -18,10 +18,6 @@
     // by `fetch`.
     limit: 0,
 
-    // Should results be cached? Any cross-session caching will need to be
-    // handled by your `fetch` method, but in-memory caching is free with rec.
-    cache: true,
-
     // Should the second selectable item be automatically selected? In other
     // words, will hitting return fire the first recommended result or the broad
     // result?
@@ -73,7 +69,7 @@
       _.extend(this, options);
 
       // Create a cache object to store results.
-      this.cached = {};
+      this.cache = {};
 
       // Track concurrent fetches for showing/hiding the loading spinner.
       this.fetchQueue = 0;
@@ -187,7 +183,7 @@
       }
 
       // Looked for a cache result before trying to load.
-      if (!this.getCached(q) && (q || this.fetchEmptyQuery)) {
+      if (!this.cache[q] && (q || this.fetchEmptyQuery)) {
 
         // Add the loading class.
         ++this.fetchQueue;
@@ -201,7 +197,7 @@
             if (!temp && !--self.fetchQueue) {
               self.$el.removeClass('js-rec-loading');
             }
-            self.setCached(q, results);
+            self.cache[q] = new self.Collection(results);
             self.render();
           });
         }, this.delay);
@@ -245,50 +241,35 @@
 
     next: function () { this.dir(1); },
 
-    getCached: function (q) {
-      return this.cache && this.cached[q];
-    },
-
-    setCached: function (q, results) {
-      results = new this.Collection(results);
-      var matches = this.filter && results.filter(_.bind(this.filter, this, q));
-      this.cached[q] = matches ? new this.Collection(matches) : results;
-      return this;
-    },
-
-    getFiltered: function (q) {
-      if (!this.filter) return null;
+    getResults: function (q) {
       var cached;
-      for (var i = q.length - 1; i > 0; --i) {
-        if (cached = this.getCached(q.slice(0, i))) break;
+      for (var i = q.length; i > 0; --i) {
+        if (cached = this.cache[q.slice(0, i)]) break;
       }
-      if (!cached) return null;
-      var matches = cached.filter(_.bind(this.filter, this, q));
-      return matches.length ? new this.Collection(matches) : null;
+      var matches = cached ? cached.filter(_.bind(this.filter, this, q)) : [];
+      return new this.Collection(matches);
     },
 
     // Build the elements for the most recent query.
     render: function () {
       var q = this.lastQ;
-      var results = this.getCached(q) || this.getFiltered(q);
+      var results = this.getResults(q);
       this.$el
         .toggleClass('js-rec-nothing', q === '')
         .removeClass('js-rec-no-results')
         .find('.js-rec-result, .js-rec-label').remove();
-      if (results) {
-        var $results = this.$el.find('.js-rec-results');
-        if (results.length) {
-          results = this.limit ? results.first(this.limit) : results.models;
-          results = _.groupBy(results, this.groupBy || 'undefined');
-          _.each(results, function (results, label) {
-            if (label !== 'undefined') $results.append(this.renderLabel(label));
-            _.each(results, function (result) {
-              $results.append(this.renderResult(result));
-            }, this);
+      var $results = this.$el.find('.js-rec-results');
+      if (results.length) {
+        results = this.limit ? results.first(this.limit) : results.models;
+        results = _.groupBy(results, this.groupBy || 'undefined');
+        _.each(results, function (results, label) {
+          if (label !== 'undefined') $results.append(this.renderLabel(label));
+          _.each(results, function (result) {
+            $results.append(this.renderResult(result));
           }, this);
-        } else {
-          this.$el.addClass('js-rec-no-results');
-        }
+        }, this);
+      } else if (this.cache[q]) {
+        this.$el.addClass('js-rec-no-results');
       }
       return this.select();
     },

@@ -117,7 +117,7 @@
               return Rec.prototype.filter.apply(this, arguments);
             },
             groupBy: function (result) {
-              return (result.rated || 'UNRATED').replace(/_/g, ' ');
+              return (result.get('rated') || 'UNRATED').replace(/_/g, ' ');
             }
           });
         });
