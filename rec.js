@@ -33,7 +33,7 @@
     queryKey: 'q',
 
     // Should rec attempt to fetch query results for an empty string?
-    fetchNothing: false,
+    fetchEmptyQuery: false,
 
     // The keys that should move the selection prev/next.
     keyDirMap: {'38': 'prev', '40': 'next'},
@@ -49,9 +49,6 @@
     // `labelTemplate` will be ignored.
     labelTemplate: function (label) { return '<div>' + label + '</div>'; },
     resultTemplate: function (result) { return '<div>' + result + '</div>'; },
-
-    // Default the last query to an empty string.
-    lastQ: '',
 
     // Define our DOM events. Note the special `.js-rec-input` and `.js-rec-
     // seletable` classes. Use these classes in your DOM structure as you see
@@ -247,7 +244,7 @@
 
     getResults: function (q) {
       var cached;
-      for (var i = q.length; i > 0; --i) {
+      for (var i = q.length; i >= 0; --i) {
         if (cached = this.cache[q.slice(0, i)]) break;
       }
       var matches = cached ? cached.filter(_.bind(this.filter, this, q)) : [];
@@ -257,7 +254,7 @@
     // Build the elements for the most recent query.
     render: function () {
       var q = this.lastQ;
-      var results = this.getResults(q);
+      var results = this.getResults(q || '');
       this.$el
         .toggleClass('js-rec-nothing', q === '')
         .removeClass('js-rec-no-results')
