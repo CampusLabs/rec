@@ -130,6 +130,7 @@
     onSelectableClick: function (ev) {
       var $input = this.$el.find('.js-rec-input');
       if (ev.currentTarget === $input[0]) return;
+      this.trigger('action', ev, $(ev.currentTarget).data('recResult'));
       if (this.clearOnClick) $input.val('').focus();
       if (this.hideOnClick) {
         $input.blur();
@@ -282,7 +283,8 @@
     renderResult: function (result) {
       var el = this.resultTemplate(result);
       return (el instanceof $ ? el : $(el))
-        .addClass('js-rec-result js-rec-selectable');
+        .addClass('js-rec-result js-rec-selectable')
+        .data('recResult', result);
     }
   });
 })();
