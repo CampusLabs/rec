@@ -148,7 +148,7 @@
     // results while waiting for a server request to come back. Override this
     // function with logic that best matches your server's filter logic.
     filter: function (q, result) {
-      var str = _.values(result.toJSON()).join(' ').toLowerCase();
+      var str = result.values().join(' ').toLowerCase();
       return _.every(q.split(' '), function (w) { return ~str.indexOf(w); });
     },
 
