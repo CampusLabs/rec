@@ -50,6 +50,9 @@
     labelTemplate: function (label) { return '<div>' + label + '</div>'; },
     resultTemplate: function (result) { return '<div>' + result + '</div>'; },
 
+    // Default the last query to an empty string.
+    lastQ: '',
+
     // Define our DOM events. Note the special `.js-rec-input` and `.js-rec-
     // seletable` classes. Use these classes in your DOM structure as you see
     // fit.
