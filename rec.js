@@ -27,7 +27,7 @@
     hideOnClick: false,
 
     // Should the input be cleared when a result is clicked?
-    clearOnClick: true,
+    clearOnClick: false,
 
     // The query string key that will be used with the default `fetch` method.
     queryKey: 'q',
